@@ -1,0 +1,40 @@
+[project]
+name = "jarvis"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Tyler",email = "artinger.tb@gmail.com"}
+]
+readme = "README.md"
+requires-python = "=3.11.13" # Required because tflite-runtime is stupid
+dependencies = [
+    "pyaudio (>=0.2.14,<0.3.0)",
+    "numpy (==1.26.4)",
+    "openwakeword (>=0.6.0,<0.7.0)",
+    "python-dotenv (>=1.1.1,<2.0.0)",
+]
+
+[tool.poetry]
+packages = [{include = "jarvis", from = "src"}]
+
+[tool.poetry.group.dev.dependencies]
+altgraph = "^0.17.4"
+cffi = "^1.17.1"
+pycparser = "^2.22"
+pyinstaller = "^6.14.2"
+pyinstaller-hooks-contrib = "^2025.7"
+setuptools = "^80.9.0"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+
+[tool.poetry-exec-plugin.commands]
+main = "poetry run python src/jarvis/main.py"
+
+[tool.poetry-pyinstaller-plugin.scripts]
+main = "src/jarvis/main.py"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
