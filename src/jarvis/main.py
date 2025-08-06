@@ -1,3 +1,6 @@
+import pathlib
+import time
+from groq.types.audio import transcription
 import openwakeword
 import pyaudio
 import numpy as np
@@ -6,6 +9,11 @@ from openwakeword.model import Model
 import os
 import platform
 import dotenv
+import subprocess
+import json
+from groq import Groq
+import mp3
+from wave import Wave_read
 
 dotenv.load_dotenv()
 
@@ -25,29 +33,46 @@ owwModel = Model(inference_framework=inference, wakeword_models=[f'{MODEL_PATH}/
 
 n_models = len(owwModel.models.keys())
 
+groq = Groq(api_key=MODEL_KEY)
+
+"""
 os.system('clear')
 print("\n\n")
 print("#"*100)
 print("Listening for wakewords...")
 print("#"*100)
 print("\n"*(n_models*3))
+"""
+
+cooldown = time.time()
 
 while True:
 	audio = np.frombuffer(mic_stream.read(MIC_CHUNK_SIZE), dtype=np.int16)
 	prediction = owwModel.predict(audio)
+	if prediction[next(iter(prediction))] > 0.5 and cooldown <= time.time():
+		print('wakeword detected')
+		audio_chunks = []
+		current_time = time.time()
+		while time.time() < current_time + 3:
+			audio_chunks.append(np.frombuffer(mic_stream.read(MIC_CHUNK_SIZE), dtype=np.int16))
+		audio_chunks = np.array(audio_chunks)
+		raw_pcm = b''.join(audio_chunks)
+		with open('output.mp3', 'wb') as file:
+			encoder = mp3.Encoder(file)
+			encoder.set_bit_rate(64)
+			encoder.set_sample_rate(16000)
+			encoder.set_channels(1)
+			encoder.set_quality(2)
+			encoder.set_mode(mp3.MODE_SINGLE_CHANNEL)
+			encoder.write(raw_pcm)
+			encoder.flush()
 
-	n_spaces = 16
-	output_string_header = """
-		Model Name		   | Score | Wakeword Status
-		--------------------------------------
-		"""
+		text = groq.audio.transcriptions.create(
+			file=pathlib.Path('output.mp3'),
+			model='whisper-large-v3-turbo',
+			response_format='verbose_json',
+			language='en'
+		)
 
-	for mdl in owwModel.prediction_buffer.keys():
-		scores = list(owwModel.prediction_buffer[mdl])
-		curr_score = format(scores[-1], '.20f').replace("-", "")
-
-		output_string_header += f"""{mdl}{" "*(n_spaces - len(mdl))}   | {curr_score[0:5]} | {"--"+" "*20 if scores[-1] <= 0.5 else "Wakeword Detected!"}
-		"""
-
-	print("\033[F"*(4*n_models+1))
-	print(output_string_header, "							  ", end='\r')
+		print(json.dumps(text, indent=2, default=str))
+		cooldown = time.time() + 1

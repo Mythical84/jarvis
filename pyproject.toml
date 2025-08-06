@@ -12,6 +12,8 @@ dependencies = [
     "numpy (==1.26.4)",
     "openwakeword (>=0.6.0,<0.7.0)",
     "python-dotenv (>=1.1.1,<2.0.0)",
+    "groq (>=0.31.0,<0.32.0)",
+    "pymp3 (>=0.2.0,<0.3.0)",
 ]
 
 [tool.poetry]
