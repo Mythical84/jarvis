@@ -4,3 +4,4 @@ dist/
 models/
 
 .env
+output.mp3
