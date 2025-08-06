@@ -1,6 +1,5 @@
 import pathlib
 import time
-from groq.types.audio import transcription
 import openwakeword
 import pyaudio
 import numpy as np
@@ -9,11 +8,9 @@ from openwakeword.model import Model
 import os
 import platform
 import dotenv
-import subprocess
 import json
 from groq import Groq
 import mp3
-from wave import Wave_read
 
 dotenv.load_dotenv()
 
@@ -28,21 +25,9 @@ audio = pyaudio.PyAudio()
 mic_stream = audio.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=MIC_CHUNK_SIZE)
 
 inference = 'onnx' if platform.system() == 'Windows' else 'tflite'
-print(inference)
 owwModel = Model(inference_framework=inference, wakeword_models=[f'{MODEL_PATH}/hey_jarvis_v0.1.{inference}'])
 
-n_models = len(owwModel.models.keys())
-
 groq = Groq(api_key=MODEL_KEY)
-
-"""
-os.system('clear')
-print("\n\n")
-print("#"*100)
-print("Listening for wakewords...")
-print("#"*100)
-print("\n"*(n_models*3))
-"""
 
 cooldown = time.time()
 
