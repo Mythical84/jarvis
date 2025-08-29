@@ -23,7 +23,7 @@ if not os.path.exists(MODEL_PATH): os.mkdir(MODEL_PATH)
 openwakeword.utils.download_models(model_names=['jarvis'], target_directory=MODEL_PATH)
 
 audio = pyaudio.PyAudio()
-mic_stream = audio.open(format=pyaudio.paInt16, channels=1, rate=8000, input=True, frames_per_buffer=MIC_CHUNK_SIZE)
+mic_stream = audio.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=MIC_CHUNK_SIZE)
 
 inference = 'onnx' if platform.system() == 'Windows' else 'tflite'
 owwModel = Model(inference_framework=inference, wakeword_models=[f'{MODEL_PATH}/hey_jarvis_v0.1.{inference}'])
@@ -42,7 +42,7 @@ while True:
 		vad = webrtcvad.Vad()
 		vad.set_mode(1)
 		data = np.frombuffer(mic_stream.read(320), dtype=np.int16)
-		while vad.is_speech(data, 8000):
+		while vad.is_speech(data, 16000):
 			audio_chunks.append(data)
 			data = mic_stream.read(320)
 		current_time = time.time()
