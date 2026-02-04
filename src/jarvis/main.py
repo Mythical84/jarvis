@@ -1,68 +1,74 @@
-import pathlib
 import time
-import openwakeword
 import pyaudio
 import numpy as np
-import openwakeword.utils
-from openwakeword.model import Model
-import os
-import platform
 import dotenv
-import json
-from groq import Groq
-import mp3
 import webrtcvad
+import jarvis.transcription
+import jarvis.llm
+import jarvis.wake
+import jarvis.memory
+import jarvis.processor
 
-dotenv.load_dotenv()
-
+# Constants
 MODEL_PATH = 'models'
 MIC_CHUNK_SIZE = 1024
-MODEL_KEY=os.getenv('MODEL_KEY')
+SAMPLE_RATE = 16000 # Hz
 
-if not os.path.exists(MODEL_PATH): os.mkdir(MODEL_PATH)
-openwakeword.utils.download_models(model_names=['jarvis'], target_directory=MODEL_PATH)
+def main():
+	# Load api keys from .env
+	dotenv.load_dotenv()
 
-audio = pyaudio.PyAudio()
-mic_stream = audio.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=MIC_CHUNK_SIZE)
+	# Initialize transcription, llm, and wake
+	transcription = jarvis.transcription.Transcription(SAMPLE_RATE)
+	llm = jarvis.llm.LLM()
+	wake = jarvis.wake.Wake(MODEL_PATH)
+	memory = jarvis.memory.Memory()
+	processor = jarvis.processor.Processor()
 
-inference = 'onnx' if platform.system() == 'Windows' else 'tflite'
-owwModel = Model(inference_framework=inference, wakeword_models=[f'{MODEL_PATH}/hey_jarvis_v0.1.{inference}'])
+	audio = pyaudio.PyAudio()
+	mic_stream = audio.open(format=pyaudio.paInt16, channels=1, rate=SAMPLE_RATE, input=True, frames_per_buffer=MIC_CHUNK_SIZE)
+	# Speech recognition
+	vad = webrtcvad.Vad()
+	vad.set_mode(1)
 
-groq = Groq(api_key=MODEL_KEY)
+	cooldown = time.time()
 
-cooldown = time.time()
+	print("Ready")
 
+	while True:
+		audio = np.frombuffer(mic_stream.read(MIC_CHUNK_SIZE), dtype=np.int16)
+		prediction = wake.predict(audio) 
+		if prediction > 0.5 and cooldown <= time.time():
+			print('wakeword detected')
+			raw_pcm = read_mic(mic_stream, vad)
 
-while True:
-	audio = np.frombuffer(mic_stream.read(MIC_CHUNK_SIZE), dtype=np.int16)
-	prediction = owwModel.predict(audio)
-	if prediction[next(iter(prediction))] > 0.5 and cooldown <= time.time():
-		print('wakeword detected')
-		audio_chunks = []
-		vad = webrtcvad.Vad()
-		vad.set_mode(1)
-		data = np.frombuffer(mic_stream.read(320), dtype=np.int16)
-		while vad.is_speech(data, 16000):
-			audio_chunks.append(data)
-			data = mic_stream.read(320)
-		current_time = time.time()
-		raw_pcm = b''.join(audio_chunks)
-		with open('output.mp3', 'wb') as file:
-			encoder = mp3.Encoder(file)
-			encoder.set_bit_rate(32)
-			encoder.set_sample_rate(8000)
-			encoder.set_channels(1)
-			encoder.set_quality(2)
-			encoder.set_mode(mp3.MODE_SINGLE_CHANNEL)
-			encoder.write(raw_pcm)
-			encoder.flush()
+			# If nothing besides the wake word is said, don't process the audio
+			if len(raw_pcm) < 31000: 
+				cooldown = time.time() + 1
+				continue
 
-		text = groq.audio.transcriptions.create(
-			file=pathlib.Path('output.mp3'),
-			model='whisper-large-v3-turbo',
-			response_format='verbose_json',
-			language='en'
-		)
+			text = transcription.speech_to_text(raw_pcm)
+			print(text)
+			json = {"input": text}
+			output = llm.predict(json, memory)
+			print(output)
 
-		print(json.dumps(text, indent=2, default=str))
-		cooldown = time.time() + 1
+			processor.process_output(output)
+
+			# Ensure a 1 second cooldown before the user can prompt again
+			# This prevents a bug where the model continously reactivates
+			cooldown = time.time() + 1
+
+def read_mic(mic_stream, vad):
+	audio_chunks = []
+	grace_time = time.time() + 1
+	data = mic_stream.read(320)
+	while vad.is_speech(data, SAMPLE_RATE) or time.time() < grace_time:
+		audio_chunks.append(data)
+		data = mic_stream.read(320)
+	raw_pcm = b''.join(audio_chunks)
+
+	return raw_pcm
+
+if __name__ == "__main__":
+	main()
