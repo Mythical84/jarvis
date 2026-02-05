@@ -18,7 +18,8 @@ class Wake():
 		inference = 'onnx' if platform.system() == 'Windows' else 'tflite'
 		self.model = Model(
 			inference_framework=inference,
-			wakeword_models=[f'{self.model_path}/hey_jarvis_v0.1.{inference}']
+			wakeword_models=[f'{self.model_path}/hey_jarvis_v0.1.{inference}'],
+			enable_speex_noise_suppression=True
 		)
 
 	def predict(self, audio):
