@@ -1,7 +1,7 @@
 import subprocess
 
 class Processor():
-	def process_output(self, out: str):
+	def process_output(self, out):
 		text = out.split("\n")
 		match text[0]:
 			case "capability 1:":

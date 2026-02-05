@@ -10,9 +10,9 @@ import jarvis.memory
 import jarvis.processor
 
 # Constants
-MODEL_PATH = 'models'
+MODEL_PATH = '/home/tyler/projects/jarvis/models'
 MIC_CHUNK_SIZE = 1024
-SAMPLE_RATE = 16000 # Hz
+SAMPLE_RATE = 32000 # Hz
 
 def main():
 	# Load api keys from .env
@@ -63,7 +63,7 @@ def read_mic(mic_stream, vad):
 	audio_chunks = []
 	grace_time = time.time() + 1
 	data = mic_stream.read(320)
-	while vad.is_speech(data, SAMPLE_RATE) or time.time() < grace_time:
+	while vad.is_speech(data, 16000) or time.time() < grace_time:
 		audio_chunks.append(data)
 		data = mic_stream.read(320)
 	raw_pcm = b''.join(audio_chunks)

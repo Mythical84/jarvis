@@ -7,7 +7,7 @@ class LLM():
 		with open("src/jarvis/prompt.txt", "r") as file:
 			self.system_prompt = "\n".join(file.readlines())
 
-	def predict(self, json, memory) -> str:
+	def predict(self, json, memory):
 		messages=[
 			{
 				"role": "system",

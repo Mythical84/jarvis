@@ -11,7 +11,6 @@ class Wake():
 			os.mkdir(model_path)
 
 		openwakeword.utils.download_models(
-			model_names=['jarvis'],
 			target_directory=self.model_path
 		)
 
