@@ -12,7 +12,7 @@ import jarvis.processor
 # Constants
 MODEL_PATH = '/home/tyler/projects/jarvis/models'
 MIC_CHUNK_SIZE = 1024
-SAMPLE_RATE = 32000 # Hz
+SAMPLE_RATE = 16000 # Hz
 
 def main():
 	# Load api keys from .env

@@ -15,6 +15,8 @@ class LLM():
 			},
 		]
 
+		# TODO: I could probably store the data already formatted in
+		# the memory queue instead of formatting it here
 		for mem in memory.get_short_term():
 			messages.append({
 				"role": "user",
@@ -29,7 +31,7 @@ class LLM():
 		messages.append({
 				"role": "user",
 				"content": json['input']
-			})
+		})
 
 		out = self.groq.chat.completions.create(
 			model='llama-3.3-70b-versatile',
